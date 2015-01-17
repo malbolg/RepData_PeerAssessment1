@@ -1,26 +1,40 @@
----
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
----
+# Reproducible Research: Peer Assessment 1
 
 
 ## Loading and preprocessing the data
-```{r}
+
+```r
 activity <- read.csv(unz("activity.zip", "activity.csv"), colClasses=c("numeric","Date","numeric"))
 ```
 
 ## What is mean total number of steps taken per day?
-```{r}
+
+```r
 steps <- activity$steps
 hist(steps)
+```
+
+![](PA1_template_files/figure-html/unnamed-chunk-2-1.png) 
+
+```r
 mean(steps, na.rm=TRUE)
+```
+
+```
+## [1] 37.3826
+```
+
+```r
 median(steps, na.rm=TRUE)
 ```
 
+```
+## [1] 0
+```
+
 ## What is the average daily activity pattern?
-```{r}
+
+```r
 # split time according to interval
 bytime <- split(activity[,c("steps","interval")], activity$interval)
 
@@ -31,17 +45,25 @@ meansteps <- as.numeric(sapply(bytime, function(x) mean(x$steps, na.rm=TRUE)))
 intervals <- unique(activity$interval)
 
 plot(intervals,meansteps, type="l")
-
 ```
+
+![](PA1_template_files/figure-html/unnamed-chunk-3-1.png) 
 
 ## Imputing missing values
 For imputing I simply use the rounded mean values from the specific interval of time, i.e., the meansteps data from the last part.
-```{r}
+
+```r
 # get the rows that have missing values
 missing <- activity[!complete.cases(activity),]
 # print number of rows with missing values
 dim(missing)[1]
+```
 
+```
+## [1] 2304
+```
+
+```r
 defaultSteps <- data.frame(steps=meansteps, interval=intervals)
 imputedSteps <- merge(missing, defaultSteps, by.x="interval", by.y="interval")
 
@@ -69,16 +91,32 @@ activityImputed$steps.y <- NULL
 
 steps <- activityImputed$steps
 hist(steps)
+```
+
+![](PA1_template_files/figure-html/unnamed-chunk-4-1.png) 
+
+```r
 # na.rm=FALSE should work as well since there should NOT be any NA values!
 mean(steps, na.rm=FALSE)
-median(steps, na.rm=FALSE)
+```
 
+```
+## [1] 37.38069
+```
+
+```r
+median(steps, na.rm=FALSE)
+```
+
+```
+## [1] 0
 ```
 After imputing, the mean differs by about 0.002 and the histogram has a bit higher spike at the lower end of the spectrum, probably because most of NAs correspond to only a few steps at max.
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
-```{r}
+
+```r
 activityImputed$weekday <- weekdays(activityImputed$date)
 
 # This kind of looping is slow but works
@@ -117,3 +155,5 @@ library(lattice)
 # finally plot the means
 xyplot(steps~interval|weekday,data=plottableframe, layout=c(1,2), type="l")
 ```
+
+![](PA1_template_files/figure-html/unnamed-chunk-5-1.png) 
