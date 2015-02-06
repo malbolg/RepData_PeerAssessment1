@@ -5,52 +5,65 @@
 
 ```r
 activity <- read.csv(unz("activity.zip", "activity.csv"), colClasses=c("numeric","Date","numeric"))
+
+# aggregates data into number of steps per day
+stepsPerDay <- aggregate(steps ~ date, data=activity, sum)
+# Averages 5 min intervals over all days for the second plot
+averageActivity <- aggregate(steps ~ interval, data=activity, mean)
 ```
 
 ## What is mean total number of steps taken per day?
 
 ```r
-steps <- activity$steps
-hist(steps)
+steps <- stepsPerDay$steps
+hist(steps, breaks=20)
 ```
 
 ![](PA1_template_files/figure-html/unnamed-chunk-2-1.png) 
+
+## The mean of steps per day is
 
 ```r
 mean(steps, na.rm=TRUE)
 ```
 
 ```
-## [1] 37.3826
+## [1] 10766.19
 ```
+
+## The median of steps per day is
 
 ```r
 median(steps, na.rm=TRUE)
 ```
 
 ```
-## [1] 0
+## [1] 10765
 ```
 
 ## What is the average daily activity pattern?
 
 ```r
-# split time according to interval
-bytime <- split(activity[,c("steps","interval")], activity$interval)
-
-#compute means by interval
-meansteps <- as.numeric(sapply(bytime, function(x) mean(x$steps, na.rm=TRUE)))
-
-#get the x axis intervals for plotting
-intervals <- unique(activity$interval)
-
-plot(intervals,meansteps, type="l")
+with(averageActivity, plot(interval, steps, type="l"))
 ```
 
-![](PA1_template_files/figure-html/unnamed-chunk-3-1.png) 
+![](PA1_template_files/figure-html/unnamed-chunk-5-1.png) 
+
+## The 5-minute interval that contains the maximum number of steps over a full day is:
+
+```r
+averageActivity[which.max(averageActivity$steps),"interval"]
+```
+
+```
+## [1] 835
+```
+
 
 ## Imputing missing values
-For imputing I simply use the rounded mean values from the specific interval of time, i.e., the meansteps data from the last part.
+For imputing I simply use the mean of steps for each interval across all days in the dataset.
+
+## The number of rows that have missing values is
 
 ```r
 # get the rows that have missing values
@@ -63,97 +76,72 @@ dim(missing)[1]
 ## [1] 2304
 ```
 
+## Creating dataset withe imputed values
+
 ```r
-defaultSteps <- data.frame(steps=meansteps, interval=intervals)
-imputedSteps <- merge(missing, defaultSteps, by.x="interval", by.y="interval")
+imputable <- activity[!complete.cases(activity),]
 
-# rename the imputed steps column and round it
-imputedSteps$steps <- round(imputedSteps$steps.y,0)
-
-# delete unnecessary columns
+# Notice the usage of averageActivity data that was computed earlier
+imputedSteps <- merge(imputable, averageActivity, by.x="interval", by.y="interval")
+imputedSteps$steps <- imputedSteps$steps.y
 imputedSteps$steps.x <- NULL
 imputedSteps$steps.y <- NULL
 
-# activityImputed is the same dataset as activity, with the imputed values
-activityImputed <- merge(activity, imputedSteps, by=c("date","interval"), all.x=TRUE)
-
-# use default values
-activityImputed$steps <- activityImputed$steps.x
-
-# choose the number of steps that is not NA
-for (i in 1:dim(activity)[1]) {
-        if (is.na(activityImputed[i,"steps"])) activityImputed[i,"steps"] <- activityImputed[i,"steps.y"] 
-}
-activityImputed$steps.x <- NULL
-activityImputed$steps.y <- NULL
-
-
-
-steps <- activityImputed$steps
-hist(steps)
+imputedActivity <- activity
+imputedActivity[!complete.cases(imputedActivity),"steps"] <- imputedSteps$steps
 ```
 
-![](PA1_template_files/figure-html/unnamed-chunk-4-1.png) 
+
+
+
+## Histogram of total steps taken each day after imputation
 
 ```r
-# na.rm=FALSE should work as well since there should NOT be any NA values!
-mean(steps, na.rm=FALSE)
+steps <- aggregate(steps ~ date, data=imputedActivity, sum)$steps
+hist(steps, breaks=20)
 ```
 
-```
-## [1] 37.38069
-```
+![](PA1_template_files/figure-html/unnamed-chunk-9-1.png) 
+
+## The imputed mean of steps per day is
 
 ```r
-median(steps, na.rm=FALSE)
+mean(steps, na.rm=TRUE)
 ```
 
 ```
-## [1] 0
+## [1] 10766.19
 ```
-After imputing, the mean differs by about 0.002 and the histogram has a bit higher spike at the lower end of the spectrum, probably because most of NAs correspond to only a few steps at max.
 
+## The imputed median of steps per day is
+
+```r
+median(steps, na.rm=TRUE)
+```
+
+```
+## [1] 11015
+```
+
+
+The impact of imputing is that the mean basically stays the same but median grows by about 250.
 
 ## Are there differences in activity patterns between weekdays and weekends?
 
 ```r
-activityImputed$weekday <- weekdays(activityImputed$date)
+# Create a factor variable weekday that indicates whether the date is a weekday or weekend
+imputedActivity$weekday = ifelse(weekdays(imputedActivity$date) == "Saturday" |
+                                         weekdays(imputedActivity$date) == "Sunday",
+                                 "weekend", "weekday")
 
-# This kind of looping is slow but works
-for (i in 1:dim(activity)[1]) {
-        weekday <- activityImputed[i,"weekday"]
-        if (weekday =="Sunday" || weekday=="Saturday") activityImputed[i, "weekday"] <- "weekend"
-        else activityImputed[i,"weekday"]  <- "weekday"
-}
-
-# the following lines only compute the mean by interval and weekday for plotting
-# I am betting there is some single plot call type to plot this directly.
-byweekday <- split(activityImputed, activityImputed$weekday)
-weekdays <- byweekday$weekday
-weekends <- byweekday$weekend
-
-weekdayints <- split(weekdays, weekdays$interval)
-weekendints <- split(weekends, weekends$interval)
-
-weekdaymeans <- as.numeric(lapply(weekdayints, function(x) mean(x$steps, na.rm=TRUE)))
-weekendmeans <- as.numeric(lapply(weekendints, function(x) mean(x$steps, na.rm=TRUE)))
-
-
-intervals <- unique(activityImputed$interval)
-
-weekdayframe <- data.frame(steps=weekdaymeans, interval=intervals, weekday=rep("weekday",288))
-weekendframe <- data.frame(steps=weekendmeans, interval=intervals, weekday=rep("weekend",288))
-
-plottableframe <- data.frame(steps=c(weekdayframe$steps, weekendframe$steps),
-                                interval=c(weekdayframe$interval, weekendframe$interval),
-                                weekday=c(as.character(weekdayframe$weekday), as.character(weekendframe$weekday)))
-
-
-#compute means by interval and weekday
+# Calculate avg steps per interval using factor weekday
+library(plyr)
+stepsPerWeekday <- ddply(imputedActivity, c("interval","weekday"),summarize,
+                         steps=mean(steps,na.rm = TRUE))
 
 library(lattice)
-# finally plot the means
-xyplot(steps~interval|weekday,data=plottableframe, layout=c(1,2), type="l")
+xyplot(steps~interval|weekday,data=stepsPerWeekday, layout=c(1,2), type="l")
 ```
 
-![](PA1_template_files/figure-html/unnamed-chunk-5-1.png) 
+![](PA1_template_files/figure-html/unnamed-chunk-12-1.png) 
+
