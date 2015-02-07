@@ -111,8 +111,8 @@ missing &lt;- activity[!complete.cases(activity),]
 dim(missing)[1]</code></pre>
 <pre><code>## [1] 2304</code></pre>
 </div>
-<div id="creating-dataset-withe-imputed-values" class="section level2">
-<h2>Creating dataset withe imputed values</h2>
+<div id="creating-the-dataset-imputedactivity-with-imputed-values" class="section level2">
+<h2>Creating the dataset <code>imputedActivity</code> with imputed values</h2>
 <pre class="r"><code>imputable &lt;- activity[!complete.cases(activity),]
 
 # Notice the usage of averageActivity data that was computed earlier

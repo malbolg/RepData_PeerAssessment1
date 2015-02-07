@@ -76,7 +76,7 @@ dim(missing)[1]
 ## [1] 2304
 ```
 
-## Creating dataset withe imputed values
+## Creating the dataset `imputedActivity` with imputed values
 
 ```r
 imputable <- activity[!complete.cases(activity),]
